@@ -28,6 +28,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -37,6 +38,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityNodeProvider;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -113,7 +115,7 @@ public class MultiSlider extends View {
     boolean mMirrorForRtl = true;
 
     //list of all the loaded thumbs
-    private LinkedList<Thumb> mThumbs;
+    private final LinkedList<Thumb> mThumbs = new LinkedList<>();
 
 
     /**
@@ -133,7 +135,7 @@ public class MultiSlider extends View {
     private int mScaledTouchSlop;
     private float mTouchDownX;
     //thumbs that are currently being dragged
-    private List<Thumb> mDraggingThumbs = new LinkedList<>();
+    private final List<Thumb> mDraggingThumbs = new LinkedList<>();
     //thumbs that are currently being touched
     LinkedList<Thumb> exactTouched = null;
 
@@ -580,7 +582,6 @@ public class MultiSlider extends View {
         mMaxWidth = 48;
         mMinHeight = 24;
         mMaxHeight = 48;
-        mThumbs = new LinkedList<Thumb>();
 
         for (int i = 0; i < numThumbs; i++) {
             mThumbs.add(new Thumb().setMin(mScaleMin).setMax(mScaleMax).setTag("thumb " + i));
@@ -1123,34 +1124,42 @@ public class MultiSlider extends View {
 
     @Override
     protected void drawableStateChanged() {
-        super.drawableStateChanged();
-        if (mDraggingThumbs != null && !mDraggingThumbs.isEmpty()) {
-            int[] state = getDrawableState();
-            for (Thumb thumb : mDraggingThumbs) {
-                if (thumb.getThumb() != null)
-                    thumb.getThumb().setState(state);
-            }
-            for (Thumb thumb : mThumbs) {
-                if (!mDraggingThumbs.contains(thumb) && thumb.getThumb() != null && thumb
-                        .getThumb().isStateful()) {
-                    if (thumb.isEnabled()) {
-                        thumb.getThumb().setState(new int[]{android.R.attr.state_enabled});
-                    } else {
-                        thumb.getThumb().setState(new int[]{-android.R.attr.state_enabled});
+        synchronized (mDraggingThumbs) {
+            if (!mDraggingThumbs.isEmpty()) {
+                int[] state = getDrawableState();
+                for (Thumb thumb : mDraggingThumbs) {
+                    if (thumb.getThumb() != null) {
+                        thumb.getThumb().setState(state);
+                        Log.e("TMP", "state dragging: " + Arrays.toString(state));
                     }
                 }
-            }
-        } else {
-            for (Thumb thumb : mThumbs) {
-                if (thumb.getThumb() != null && thumb.getThumb().isStateful()) {
-                    if (thumb.isEnabled()) {
-                        thumb.getThumb().setState(new int[]{android.R.attr.state_enabled});
-                    } else {
-                        thumb.getThumb().setState(new int[]{-android.R.attr.state_enabled});
+                for (Thumb thumb : mThumbs) {
+                    if (!mDraggingThumbs.contains(thumb) && thumb.getThumb() != null && thumb
+                            .getThumb().isStateful()) {
+                        if (thumb.isEnabled()) {
+                            thumb.getThumb().setState(new int[]{android.R.attr.state_enabled,
+                                    -android.R.attr.state_pressed});
+                        } else {
+                            thumb.getThumb().setState(new int[]{-android.R.attr.state_enabled});
+                        }
+                    }
+                }
+            } else {
+                for (Thumb thumb : mThumbs) {
+                    if (thumb.getThumb() != null && thumb.getThumb().isStateful()) {
+                        Log.e("TMP", "state NOT dragging: " + Arrays.toString(getDrawableState()));
+                        if (thumb.isEnabled()) {
+                            thumb.getThumb().setState(new int[]{android.R.attr.state_enabled,
+                                    -android.R.attr.state_pressed});
+                        } else {
+                            thumb.getThumb().setState(new int[]{-android.R.attr.state_enabled});
+                        }
                     }
                 }
             }
         }
+        super.drawableStateChanged();
+
     }
 
 
@@ -1683,7 +1692,13 @@ public class MultiSlider extends View {
     }
 
     void onStopTrackingTouch() {
-        mDraggingThumbs.clear();
+        for(Thumb thumb:mDraggingThumbs) {
+            mDraggingThumbs.remove(thumb);
+            if (hasOnTrackingChangeListener()) {
+                mOnTrackingChangeListener.onStopTrackingTouch(this, thumb, thumb.getValue());
+            }
+        }
+        drawableStateChanged();
     }
 
     private boolean hasOnThumbValueChangeListener() {
