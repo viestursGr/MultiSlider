@@ -320,7 +320,7 @@ public class MultiSlider extends View {
          * @return
          */
         public Thumb setValue(int value) {
-            if(mThumbs.contains(this)) {
+            if (mThumbs.contains(this)) {
                 setThumbValue(this, value, false);
             } else {
                 this.value = value;
@@ -590,6 +590,7 @@ public class MultiSlider extends View {
 
     /**
      * Re-sets the number of thumbs and reposition the thumbs
+     *
      * @param numThumbs the new number of thumbs
      * @return the MultiSlider
      */
@@ -599,6 +600,7 @@ public class MultiSlider extends View {
 
     /**
      * Re-sets the number of thumbs
+     *
      * @param numThumbs the new number of thumbs
      * @param repositon if true it will reposition the thumbs to be equally distributed across the
      *                  scale, otherwise all thumbs will be positioned at 0
@@ -610,7 +612,7 @@ public class MultiSlider extends View {
             addThumb(0);
         }
 
-        if(repositon) {
+        if (repositon) {
             repositionThumbs();
         }
 
@@ -629,8 +631,9 @@ public class MultiSlider extends View {
 
     /**
      * Add a thumb to the Slider at a custom position
+     *
      * @param thumb thumb instance in the context of the Slider
-     * @param pos the position at which the thumb should be added
+     * @param pos   the position at which the thumb should be added
      * @return true if the thumb was added and Slider modified
      */
     public boolean addThumbOnPos(Thumb thumb, int pos) {
@@ -654,6 +657,7 @@ public class MultiSlider extends View {
 
     /**
      * Add a thumb with predefined value to the slider after the last thumb
+     *
      * @param value the initial thumb value
      * @return the Thumb instance that was added
      */
@@ -667,6 +671,7 @@ public class MultiSlider extends View {
 
     /**
      * Add a thumb to the slider after the last thumb with value to the maximum scale value
+     *
      * @return the Thumb instance that was added
      */
     public Thumb addThumb() {
@@ -677,7 +682,8 @@ public class MultiSlider extends View {
 
     /**
      * Add a thumb to the Slider at a custom position
-     * @param pos the position at which the thumb should be added
+     *
+     * @param pos   the position at which the thumb should be added
      * @param value the initial thumb value
      * @return the Thumb instance that was added
      */
@@ -691,6 +697,7 @@ public class MultiSlider extends View {
 
     /**
      * Add a thumb to the Slider at a custom position
+     *
      * @param pos the position at which the thumb should be added
      * @return the Thumb instance that was added
      */
@@ -1003,7 +1010,7 @@ public class MultiSlider extends View {
      */
     public synchronized void setMax(int max, boolean extendMaxForThumbs, boolean repositionThumbs) {
         if (max < mScaleMin) {
-           throw new IllegalArgumentException(String.format("setMax(%d) < Min(%d)",max,mScaleMin));
+            throw new IllegalArgumentException(String.format("setMax(%d) < Min(%d)", max, mScaleMin));
         }
 
         if (max != mScaleMax) {
@@ -1069,7 +1076,7 @@ public class MultiSlider extends View {
      */
     public synchronized void setMin(int min, boolean extendMinForThumbs, boolean repositionThumbs) {
         if (min > mScaleMax) {
-            throw new IllegalArgumentException(String.format("setMin(%d) > Max(%d)",min,mScaleMax));
+            throw new IllegalArgumentException(String.format("setMin(%d) > Max(%d)", min, mScaleMax));
         }
 
         if (min != mScaleMin) {
@@ -1544,29 +1551,16 @@ public class MultiSlider extends View {
                 break;
 
             case MotionEvent.ACTION_UP:
-                setPressed(false);
                 //there are other pointers left
             case MotionEvent.ACTION_POINTER_UP:
                 if (currThumb != null) {
                     setThumbValue(currThumb, getValue(event, currThumb), true);
                     setHotspot(xx, yy, currThumb);
-                    boolean toUnPress = false;
                     if (!isPressed()) {
                         setPressed(true);
-                        toUnPress = true;
                     }
 
                     onStopTrackingTouch(currThumb);
-                    if (toUnPress) {
-                        setPressed(false);
-                    }
-                } else {
-//                    currThumb = getClosestThumb(newValue);
-//                    // Touch up when we never crossed the touch slop threshold should
-//                    // be interpreted as a tap-seek to that location.
-//                    onStartTrackingTouch(currThumb);
-//                    setThumbValue(currThumb, newValue, true);
-//                    onStopTrackingTouch(currThumb);
                 }
                 // ProgressBar doesn't know to repaint the thumb drawable
                 // in its inactive state when the touch stops (because the
@@ -1574,10 +1568,7 @@ public class MultiSlider extends View {
                 invalidate();
                 break;
             case MotionEvent.ACTION_CANCEL:
-                if (mDraggingThumbs != null) {
-                    onStopTrackingTouch();
-                    setPressed(false);
-                }
+                onStopTrackingTouch();
                 invalidate(); // see above explanation
                 break;
         }
@@ -1663,13 +1654,17 @@ public class MultiSlider extends View {
      */
     void onStartTrackingTouch(Thumb thumb) {
         if (thumb != null) {
-            setPressed(true);
+            mDraggingThumbs.add(thumb);
+            if (isPressed()) {
+                drawableStateChanged();
+            } else {
+                setPressed(true);
+            }
+
             if (thumb.getThumb() != null) {
                 // This may be within the padding region.
                 invalidate(thumb.getThumb().getBounds());
             }
-            mDraggingThumbs.add(thumb);
-            drawableStateChanged();
             if (hasOnTrackingChangeListener()) {
                 mOnTrackingChangeListener.onStartTrackingTouch(this, thumb, thumb.getValue());
             }
@@ -1687,18 +1682,22 @@ public class MultiSlider extends View {
             if (hasOnTrackingChangeListener()) {
                 mOnTrackingChangeListener.onStopTrackingTouch(this, thumb, thumb.getValue());
             }
-            drawableStateChanged();
+            if (mDraggingThumbs.size() == 0) {
+                setPressed(false);
+            } else {
+                drawableStateChanged();
+            }
         }
     }
 
     void onStopTrackingTouch() {
-        for(Thumb thumb:mDraggingThumbs) {
+        for (Thumb thumb : mDraggingThumbs) {
             mDraggingThumbs.remove(thumb);
             if (hasOnTrackingChangeListener()) {
                 mOnTrackingChangeListener.onStopTrackingTouch(this, thumb, thumb.getValue());
             }
         }
-        drawableStateChanged();
+        setPressed(false);
     }
 
     private boolean hasOnThumbValueChangeListener() {
