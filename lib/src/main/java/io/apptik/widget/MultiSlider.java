@@ -82,9 +82,14 @@ public class MultiSlider extends View {
         void onStopTrackingTouch(MultiSlider multiSlider, MultiSlider.Thumb thumb, int value);
     }
 
+    public interface OnThumbClickListener {
+        void clicked(Thumb thumb, int position);
+    }
+
     private AccessibilityNodeProvider mAccessibilityNodeProvider;
     private OnThumbValueChangeListener mOnThumbValueChangeListener;
     private OnTrackingChangeListener mOnTrackingChangeListener;
+    private OnThumbClickListener mOnThumbClickListener;
 
     int mMinWidth;
     int mMaxWidth;
@@ -168,6 +173,8 @@ public class MultiSlider extends View {
         Drawable range;
         int thumbOffset;
 
+        private boolean togglable = false;
+
         //cannot be moved if invisible and it is not displayed
         private boolean isInvisible = false;
 
@@ -180,11 +187,26 @@ public class MultiSlider extends View {
             value = max;
         }
 
+        public Thumb(boolean toggable){
+            super();
+            this.togglable = toggable;
+        }
+
+        public boolean isTogglable(){
+            return togglable;
+        }
+
         /**
          * @return the range drawable
          */
         public Drawable getRange() {
             return range;
+        }
+
+        public void toggle(){
+            if(togglable){
+                setEnabled(!isEnabled);
+            }
         }
 
         /**
@@ -367,7 +389,9 @@ public class MultiSlider extends View {
             return this;
         }
 
-
+        public void setIsTogglable(boolean togglable) {
+            this.togglable = togglable;
+        }
     }
 
     public MultiSlider(Context context) {
@@ -552,6 +576,10 @@ public class MultiSlider extends View {
      */
     public void setOnTrackingChangeListener(OnTrackingChangeListener l) {
         mOnTrackingChangeListener = l;
+    }
+
+    public void setOnThumbClickListener(OnThumbClickListener l) {
+        mOnThumbClickListener = l;
     }
 
     /**
@@ -1161,8 +1189,8 @@ public class MultiSlider extends View {
                 }
             }
         }
-        super.drawableStateChanged();
 
+        super.drawableStateChanged();
     }
 
 
@@ -1380,13 +1408,17 @@ public class MultiSlider extends View {
      * @return
      */
     private LinkedList<Thumb> getClosestThumb(int x) {
-        LinkedList<Thumb> exact = new LinkedList<Thumb>();
+        LinkedList<Thumb> exact = new LinkedList<>();
         Thumb closest = null;
         int currDistance = getAvailable() + 1;
 
         for (Thumb thumb : mThumbs) {
             if (thumb.getThumb() == null || !thumb.isEnabled()
-                    || mDraggingThumbs.contains(thumb)) continue;
+                    || mDraggingThumbs.contains(thumb)) {
+                if(!thumb.isTogglable()) {
+                    continue;
+                }
+            }
 
             int minV = x - thumb.getThumb().getIntrinsicWidth();
             int maxV = x + thumb.getThumb().getIntrinsicWidth();
@@ -1450,6 +1482,28 @@ public class MultiSlider extends View {
         }
     }
 
+    /**
+     * Max allowed duration for a "click", in milliseconds.
+     */
+    private static final int MAX_CLICK_DURATION = 1000;
+    /**
+     * Max allowed distance to move during a "click", in DP.
+     */
+    private static final int MAX_CLICK_DISTANCE = 15;
+    private long pressStartTime;
+    private float pressedX;
+    private float pressedY;
+    private boolean stayedWithinClickDistance;
+    private float distance(float x1, float y1, float x2, float y2) {
+        float dx = x1 - x2;
+        float dy = y1 - y2;
+        float distanceInPx = (float) Math.sqrt(dx * dx + dy * dy);
+        return pxToDp(distanceInPx);
+    }
+    private float pxToDp(float px) {
+        return px /  getResources().getDisplayMetrics().density;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (!mIsUserSeekable || !isEnabled()) {
@@ -1463,6 +1517,7 @@ public class MultiSlider extends View {
         Thumb currThumb = null;
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN
                 || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
+
             LinkedList<Thumb> closestOnes =
                     getClosestThumb((int) event.getX(pointerIdx));
 
@@ -1485,9 +1540,24 @@ public class MultiSlider extends View {
                     exactTouched = closestOnes;
                 }
             }
+
+            if(currThumb != null){
+                Rect rect = currThumb.getThumb().getBounds();
+                if(rect.contains(xx, yy)){
+                    pressStartTime = System.currentTimeMillis();
+                    pressedX = xx;
+                    pressedY = yy;
+                    stayedWithinClickDistance = true;
+                }
+            }
         } else if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
             if (exactTouched != null && !exactTouched.isEmpty()) {
                 currThumb = getMostMovableThumb(event);
+
+                if (stayedWithinClickDistance && distance(pressedX, pressedY, xx, yy) > MAX_CLICK_DISTANCE) {
+                    stayedWithinClickDistance = false;
+                }
+
                 //check if move actually changed value
                 // if (currThumb == null) return false;
             } else if (mDraggingThumbs.size() > pointerIdx) {
@@ -1519,7 +1589,7 @@ public class MultiSlider extends View {
                     setHotspot(xx, yy, currThumb);
                 }
                 break;
-            //with move we dont have pointer action so set them all
+            //with move we don't have pointer action so set them all
             case MotionEvent.ACTION_MOVE:
                 if (mDraggingThumbs.contains(currThumb)) {
                     //need the index
@@ -1528,11 +1598,11 @@ public class MultiSlider extends View {
                                 != null) {
                             invalidate(mDraggingThumbs.get(i).getThumb().getBounds());
                         }
+
                         setThumbValue(mDraggingThumbs.get(i), getValue(event, i, mDraggingThumbs
                                 .get(i)), true);
-
-
                     }
+
                     setHotspot(xx, yy, currThumb);
                 } else {
                     final float x = event.getX(pointerIdx);
@@ -1543,21 +1613,30 @@ public class MultiSlider extends View {
                         setHotspot(xx, yy, currThumb);
                     }
                 }
-
                 break;
-
             case MotionEvent.ACTION_UP:
                 //there are other pointers left
             case MotionEvent.ACTION_POINTER_UP:
                 if (currThumb != null) {
-                    setThumbValue(currThumb, getValue(event, currThumb), true);
-                    setHotspot(xx, yy, currThumb);
-                    if (!isPressed()) {
-                        setPressed(true);
+                    long pressDuration = System.currentTimeMillis() - pressStartTime;
+                    if (pressDuration < MAX_CLICK_DURATION && stayedWithinClickDistance) {
+                        if(currThumb.isTogglable()){
+                            currThumb.toggle();
+                        }
+                        if(mOnThumbClickListener != null) {
+                            mOnThumbClickListener.clicked(currThumb, pointerIdx);
+                        }
+                    } else {
+                        setThumbValue(currThumb, getValue(event, currThumb), true);
+                        setHotspot(xx, yy, currThumb);
+                        if (!isPressed()) {
+                            setPressed(true);
+                        }
                     }
 
                     onStopTrackingTouch(currThumb);
                 }
+
                 // ProgressBar doesn't know to repaint the thumb drawable
                 // in its inactive state when the touch stops (because the
                 // value has not apparently changed)
@@ -1568,6 +1647,7 @@ public class MultiSlider extends View {
                 invalidate(); // see above explanation
                 break;
         }
+
         return true;
     }
 

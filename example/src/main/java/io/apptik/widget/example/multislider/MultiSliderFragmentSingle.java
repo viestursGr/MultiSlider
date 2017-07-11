@@ -45,7 +45,10 @@ public class MultiSliderFragmentSingle extends Fragment {
         final TextView min6 = (TextView) v.findViewById(R.id.minValue6);
         final TextView min7 = (TextView) v.findViewById(R.id.minValue7);
 
-        MultiSlider multiSlider1 = (MultiSlider) v.findViewById(R.id.multiSlider1);
+        final MultiSlider multiSlider1 = (MultiSlider) v.findViewById(R.id.multiSlider1);
+
+        multiSlider1.getThumb(0).setIsTogglable(true);
+
         MultiSlider multiSlider2 = (MultiSlider) v.findViewById(R.id.multiSlider2);
         MultiSlider multiSlider3 = (MultiSlider) v.findViewById(R.id.multiSlider3);
         MultiSlider multiSlider4 = (MultiSlider) v.findViewById(R.id.multiSlider4);
