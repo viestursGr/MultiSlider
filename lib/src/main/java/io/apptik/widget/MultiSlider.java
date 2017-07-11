@@ -86,10 +86,15 @@ public class MultiSlider extends View {
         void clicked(Thumb thumb, int position);
     }
 
+    public interface OnThumbToggleListener {
+        void toggle(Thumb thumb, int position);
+    }
+
     private AccessibilityNodeProvider mAccessibilityNodeProvider;
     private OnThumbValueChangeListener mOnThumbValueChangeListener;
     private OnTrackingChangeListener mOnTrackingChangeListener;
     private OnThumbClickListener mOnThumbClickListener;
+    private OnThumbToggleListener mOnThumbToggleListener;
 
     int mMinWidth;
     int mMaxWidth;
@@ -580,6 +585,10 @@ public class MultiSlider extends View {
 
     public void setOnThumbClickListener(OnThumbClickListener l) {
         mOnThumbClickListener = l;
+    }
+
+    public void setOnThumbToggleListener(OnThumbToggleListener l) {
+        mOnThumbToggleListener = l;
     }
 
     /**
@@ -1622,6 +1631,9 @@ public class MultiSlider extends View {
                     if (pressDuration < MAX_CLICK_DURATION && stayedWithinClickDistance) {
                         if(currThumb.isTogglable()){
                             currThumb.toggle();
+                            if(mOnThumbToggleListener != null){
+                                mOnThumbToggleListener.toggle(currThumb, pointerIdx);
+                            }
                         }
                         if(mOnThumbClickListener != null) {
                             mOnThumbClickListener.clicked(currThumb, pointerIdx);
