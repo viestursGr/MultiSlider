@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import io.apptik.widget.MultiSlider;
@@ -53,7 +54,7 @@ public class MultiSliderFragmentRange extends Fragment {
         final TextView max7 = (TextView) v.findViewById(R.id.maxValue7);
 
 
-        MultiSlider multiSlider1 = (MultiSlider) v.findViewById(R.id.range_slider1);
+        final MultiSlider multiSlider1 = (MultiSlider) v.findViewById(R.id.range_slider1);
         MultiSlider multiSlider2 = (MultiSlider) v.findViewById(R.id.range_slider2);
         MultiSlider multiSlider3 = (MultiSlider) v.findViewById(R.id.range_slider3);
         MultiSlider multiSlider4 = (MultiSlider) v.findViewById(R.id.range_slider4);
@@ -61,6 +62,14 @@ public class MultiSliderFragmentRange extends Fragment {
         MultiSlider multiSlider6 = (MultiSlider) v.findViewById(R.id.range_slider6);
         MultiSlider multiSlider7 = (MultiSlider) v.findViewById(R.id.range_slider7);
 
+
+        Button b = (Button) v.findViewById(R.id.test);
+        b.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                multiSlider1.setEnabled(!multiSlider1.isEnabled());
+            }
+        });
 
         min1.setText(String.valueOf(multiSlider1.getThumb(0).getValue()));
         max1.setText(String.valueOf(multiSlider1.getThumb(1).getValue()));

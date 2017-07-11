@@ -20,6 +20,7 @@ package io.apptik.widget;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -238,6 +239,15 @@ public class MultiSlider extends View {
                     getThumb().setState(new int[]{-android.R.attr.state_enabled});
                 }
             }
+
+            if (getRange() != null) {
+                if (isEnabled()) {
+                    getRange().setState(new int[]{android.R.attr.state_enabled});
+                } else {
+                    getRange().setState(new int[]{-android.R.attr.state_enabled});
+                }
+            }
+
             return this;
         }
 
@@ -2094,6 +2104,16 @@ public class MultiSlider extends View {
             }
 
             return false;
+        }
+
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        for (Thumb thumb: mThumbs){
+            thumb.setEnabled(enabled);
+            setRangeDrawable(thumb, thumb.getRange(), !enabled ? Color.GRAY : defRangeColor);
         }
     }
 }

@@ -29,7 +29,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
-
+        <Button
+            android:id="@+id/test"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="TEST"
+            />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -61,10 +66,9 @@
             android:id="@+id/range_slider1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
             app:range1="@drawable/multislider_primary_mtrl_alpha"
-
-            />
+            app:rangeColor="@color/colorPrimary"
+        />
 
     </LinearLayout>
 
