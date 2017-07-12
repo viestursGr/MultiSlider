@@ -801,6 +801,23 @@ public class MultiSlider extends View {
         invalidate();
     }
 
+    public Thumb createThumb(int value, boolean toggle){
+        Thumb thumb = new Thumb();
+        thumb.setValue(value);
+        thumb.setIsTogglable(toggle);
+        return thumb;
+    }
+
+    public Thumb createThumb(){
+        return new Thumb();
+    }
+
+    public Thumb createThumb(int value){
+        Thumb thumb = new Thumb();
+        thumb.setValue(value);
+        return thumb;
+    }
+
     /**
      * Manually set the track drawable
      *
